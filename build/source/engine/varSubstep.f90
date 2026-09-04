@@ -97,6 +97,7 @@ subroutine varSubstep(&
                       io_varSubstep,     & ! intent(inout) : model control
                       ! input/output: data structures
                       model_decisions,   & ! intent(in)    : model decisions
+                      noahmp, &
                       lookup_data,       & ! intent(in)    : lookup tables
                       type_data,         & ! intent(in)    : type of vegetation and soil
                       attr_data,         & ! intent(in)    : spatial attributes
@@ -120,6 +121,7 @@ subroutine varSubstep(&
   USE systemSolv_module,only:systemSolv                 ! solve the system of equations for one time step
   ! identify name of variable type (for error message)
   USE get_ixName_module,only:get_varTypeName           ! to access type strings for error messages
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! ---------------------------------------------------------------------------------------
   ! * dummy variables
@@ -129,6 +131,7 @@ subroutine varSubstep(&
   type(io_type_varSubstep),intent(inout) :: io_varSubstep             ! model control
   ! input/output: data structures
   type(model_options),intent(in)         :: model_decisions(:)        ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup),intent(in)               :: lookup_data               ! lookup tables
   type(var_i),intent(in)                 :: type_data                 ! type of vegetation and soil
   type(var_d),intent(in)                 :: attr_data                 ! spatial attributes
@@ -340,6 +343,7 @@ subroutine varSubstep(&
                       flux_temp,         & ! intent(inout): model fluxes for a local HRU
                       bvar_data,         & ! intent(in):    model variables for the local basin
                       model_decisions,   & ! intent(in):    model decisions
+                      noahmp, &
                       stateVecInit,      & ! intent(in):    initial state vector
                       ! output: model control
                       deriv_data,        & ! intent(inout): derivatives in model fluxes w.r.t. relevant state variables

@@ -12,7 +12,7 @@ USE data_types,only:&
                     var_dlength,  & ! data vector with variable length dimension (rkind)
                     zLookup,      & ! data vector with variable length dimension (rkind)
                     model_options   ! defines the model decisions
-
+use noahmp_globals,only:noahmp_context
 implicit none
 
 type data4ida
@@ -29,6 +29,7 @@ type data4ida
   logical(lgt)                    :: computeVegFlux                  ! flag to indicate if computing fluxes over vegetation
   logical(lgt)                    :: scalarSolution                  ! flag to denote if implementing the scalar solution
   type(model_options),allocatable :: model_decisions(:)              ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup)                   :: lookup_data                     ! lookup tables
   type(var_i)                     :: type_data                       ! type of vegetation and soil
   type(var_d)                     :: attr_data                       ! spatial attributes

@@ -68,6 +68,7 @@ subroutine eval8summaWithPrime(&
                       sMul,                          & ! intent(inout): state vector multiplier (used in the residual calculations)
                       ! input: data structures
                       model_decisions,               & ! intent(in):    model decisions
+                      noahmp, &
                       lookup_data,                   & ! intent(in):    lookup table data structure
                       type_data,                     & ! intent(in):    type of vegetation and soil
                       attr_data,                     & ! intent(in):    spatial attributes
@@ -115,6 +116,7 @@ subroutine eval8summaWithPrime(&
   USE heat_Cp_Cm_module,only:stateMultiplier                ! update state multiplier
   USE computResidWithPrime_module,only:computResidWithPrime ! compute residuals given a state vector
   USE thermConductivity_module,only:thermConductivity       ! update thermal conductivity and derivatives
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! --------------------------------------------------------------------------------------------------------------------------------
   ! --------------------------------------------------------------------------------------------------------------------------------
@@ -135,6 +137,7 @@ subroutine eval8summaWithPrime(&
   real(qp),intent(inout)          :: sMul(:)   ! NOTE: qp        ! state vector multiplier (used in the residual calculations)
   ! input: data structures
   type(model_options),intent(in)  :: model_decisions(:)          ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup),      intent(in)  :: lookup_data                 ! lookup tables
   type(var_i),        intent(in)  :: type_data                   ! type of vegetation and soil
   type(var_d),        intent(in)  :: attr_data                   ! spatial attributes
@@ -594,6 +597,7 @@ subroutine eval8summaWithPrime(&
                     mLayerVolFracIceTrial,     & ! intent(in):    trial value for the volumetric ice in each snow and soil layer (-)
                     ! input: data structures
                     model_decisions,           & ! intent(in):    model decisions
+                    noahmp, &
                     type_data,                 & ! intent(in):    type of vegetation and soil
                     attr_data,                 & ! intent(in):    spatial attributes
                     mpar_data,                 & ! intent(in):    model parameters
@@ -761,6 +765,7 @@ integer(c_int) function eval8summa4ida(tres, sunvec_y, sunvec_yp, sunvec_r, user
                 eqns_data%sMul,                          & ! intent(inout): state vector multiplier (used in the residual calculations)
                 ! input: data structures
                 eqns_data%model_decisions,               & ! intent(in):    model decisions
+                eqns_data%noahmp, &
                 eqns_data%lookup_data,                   & ! intent(in):    lookup data
                 eqns_data%type_data,                     & ! intent(in):    type of vegetation and soil
                 eqns_data%attr_data,                     & ! intent(in):    spatial attributes

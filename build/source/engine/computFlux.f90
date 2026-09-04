@@ -114,6 +114,7 @@ subroutine computFlux(&
                       mLayerVolFracIceTrial,    & ! intent(in):    trial value for the volumetric ice in each snow and soil layer (-)
                       ! input: data structures
                       model_decisions,          & ! intent(in):    model decisions
+                      noahmp, &
                       type_data,                & ! intent(in):    type of vegetation and soil
                       attr_data,                & ! intent(in):    spatial attributes
                       mpar_data,                & ! intent(in):    model parameters
@@ -140,6 +141,7 @@ subroutine computFlux(&
   USE soilLiqFlux_module,only:soilLiqFlux         ! compute liquid water fluxes through soil
   USE groundwatr_module,only:groundwatr           ! compute the baseflow flux
   USE bigAquifer_module,only:bigAquifer           ! compute fluxes for the big aquifer
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! -------------------------------------------------------------------------------------------------------------------------
   ! * dummy variables
@@ -169,6 +171,7 @@ subroutine computFlux(&
   real(rkind),intent(in)             :: mLayerVolFracIceTrial(:)    ! trial value for volumetric fraction of ice (-)
   ! input: data structures
   type(model_options),intent(in)     :: model_decisions(:)          ! model decisions
+  type(noahmp_context) :: noahmp
   type(var_i),        intent(in)     :: type_data                   ! type of vegetation and soil
   type(var_d),        intent(in)     :: attr_data                   ! spatial attributes
   type(var_dlength),  intent(in)     :: mpar_data                   ! model parameters
@@ -220,7 +223,7 @@ subroutine computFlux(&
     doVegNrgFlux = (ixCasNrg/=integerMissing .or. ixVegNrg/=integerMissing .or. ixTopNrg/=integerMissing)
     if (doVegNrgFlux) then ! if necessary, calculate the energy fluxes over vegetation
       call initialize_vegNrgFlux
-      call vegNrgFlux(in_vegNrgFlux,type_data,forc_data,mpar_data,indx_data,prog_data,diag_data,flux_data,bvar_data,model_decisions,out_vegNrgFlux)
+      call vegNrgFlux(in_vegNrgFlux,type_data,forc_data,mpar_data,indx_data,prog_data,diag_data,flux_data,bvar_data,model_decisions,noahmp,out_vegNrgFlux)
       call finalize_vegNrgFlux; if(err/=0)then; return; endif
     end if
   end associate

@@ -120,6 +120,7 @@ subroutine vegNrgFlux(&
                       flux_data,                               & ! intent(inout): model fluxes for a local HRU
                       bvar_data,                               & ! intent(in):    model variables for the local basin
                       model_decisions,                         & ! intent(in):    model decisions
+                      noahmp, &
                       ! output: fluxes, derivatives, and error control
                       out_vegNrgFlux)                            ! intent(out):   fluxes, derivatives, and error control
 
@@ -132,6 +133,7 @@ subroutine vegNrgFlux(&
   USE stomResist_module,only:stomResist                          ! subroutine to calculate stomatal resistance
   ! phase changes
   USE snow_utils_module,only:fracliquid                          ! compute fraction of liquid water at a given temperature
+  use noahmp_globals,only:noahmp_context
 
   ! compute energy and mass fluxes for vegetation
   implicit none
@@ -151,6 +153,7 @@ subroutine vegNrgFlux(&
   type(var_dlength),intent(inout)       :: flux_data                    ! model fluxes for a local HRU
   type(var_dlength),intent(in)          :: bvar_data                    ! model variables for the local basin
   type(model_options),intent(in)        :: model_decisions(:)           ! model decisions
+  type(noahmp_context) :: noahmp
   ! output: fluxes, derivatives, and error control
   type(out_type_vegNrgFlux),intent(out) :: out_vegNrgFlux               ! data structure for vegNrgFlux arguments
   ! ---------------------------------------------------------------------------------------
@@ -738,6 +741,7 @@ subroutine vegNrgFlux(&
                           forc_data,                         & ! intent(in):    model forcing data
                           mpar_data,                         & ! intent(in):    model parameters
                           model_decisions,                   & ! intent(in):    model decisions
+                          noahmp, &
                           ! input-output: data structures
                           diag_data,                         & ! intent(inout): model diagnostic variables for a local HRU
                           flux_data,                         & ! intent(inout): model fluxes for a local HRU

@@ -100,6 +100,7 @@ contains
                        dMat,                    & ! intent(inout): diagonal matrix (excludes flux derivatives)
                        ! input: data structures
                        model_decisions,         & ! intent(in):    model decisions
+                       noahmp, &
                        lookup_data,             & ! intent(in):    lookup tables
                        type_data,               & ! intent(in):    type of vegetation and soil
                        attr_data,               & ! intent(in):    spatial attributes
@@ -126,6 +127,7 @@ contains
  USE computJacob_module, only: computJacob
  USE matrixOper_module,  only: lapackSolv
  USE matrixOper_module,  only: scaleMatrices
+ use noahmp_globals,only:noahmp_context
  implicit none
  ! --------------------------------------------------------------------------------------------------------------------------------
  type(in_type_summaSolv4homegrown),intent(in)    :: in_SS4HG ! model control variables and previous function evaluation
@@ -139,6 +141,7 @@ contains
  real(rkind),intent(inout)       :: dMat(:)                   ! diagonal matrix (excludes flux derivatives)
  ! input: data structures
  type(model_options),intent(in)  :: model_decisions(:)        ! model decisions
+ type(noahmp_context) :: noahmp
  type(zLookup),      intent(in)  :: lookup_data               ! lookup tables
  type(var_i),        intent(in)  :: type_data                 ! type of vegetation and soil
  type(var_d),        intent(in)  :: attr_data                 ! spatial attributes
@@ -233,7 +236,7 @@ contains
   
    ! refine Newton step if needed
    call refine_Newton_step(in_SS4HG,mSoil,stateVecTrial,newtStepScaled,aJacScaled,rVecScaled,fScale,xScale,&       ! input
-                          model_decisions,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
+                          model_decisions,noahmp,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
                           sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&    ! input-output
                           stateVecNew,fluxVecNew,resSinkNew,resVecNew,tooMuchMelt,out_SS4HG,return_flag)           ! output
    if (return_flag) return ! return if error
@@ -332,12 +335,13 @@ contains
  ! * module subroutine refine_Newton_step: refine the Newton step if necessary
  ! *********************************************************************************************************
  subroutine refine_Newton_step(in_SS4HG,mSoil,stateVecTrial,newtStepScaled,aJacScaled,rVecScaled,fScale,xScale,&        ! input
-                               model_decisions,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
+                               model_decisions,noahmp,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
                                sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&    ! input-output
                                stateVecNew,fluxVecNew,resSinkNew,resVecNew,tooMuchMelt,out_SS4HG,return_flag)           ! output
   ! provide access to the external procedures
   USE matrixOper_module, only: computGradient
   USE eval8summa_module, only: imposeConstraints
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! input
   type(in_type_summaSolv4homegrown),intent(in) :: in_SS4HG         ! model control variables and previous function evaluation
@@ -349,6 +353,7 @@ contains
   real(rkind),intent(in)          :: fScale(:)                     ! characteristic scale of the function evaluations
   real(rkind),intent(in)          :: xScale(:)                     ! characteristic scale of the state vector
   type(model_options),intent(in)  :: model_decisions(:)            ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup),      intent(in)  :: lookup_data                   ! lookup tables
   type(var_i),        intent(in)  :: type_data                     ! type of vegetation and soil
   type(var_d),        intent(in)  :: attr_data                     ! spatial attributes
@@ -415,7 +420,7 @@ contains
      case(ixLineSearch)  
       call in_LSR % initialize(doRefine,fOld)    
       call lineSearchRefinement(in_LSR,in_SS4HG,mSoil,stateVecTrial,newtStepScaled,aJacScaled,rVecScaled,fScale,xScale,&! input
-                               model_decisions,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
+                               model_decisions,noahmp,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
                                sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&    ! input-output
                                stateVecNew,fluxVecNew,resSinkNew,resVecNew,out_SS4HG,out_LSR)                           ! output
       call out_LSR % finalize(fNew,converged,err,cmessage)
@@ -432,7 +437,7 @@ contains
      doRefine=.false.;
      call in_LSR % initialize(doRefine,fOld)    
      call lineSearchRefinement(in_LSR,in_SS4HG,mSoil,stateVecTrial,newtStepScaled,aJacScaled,rVecScaled,fScale,xScale,& ! input
-                              model_decisions,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
+                              model_decisions,noahmp,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
                               sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&    ! input-output
                               stateVecNew,fluxVecNew,resSinkNew,resVecNew,out_SS4HG,out_LSR)                           ! output
      call out_LSR % finalize(fNew,converged,err,cmessage)
@@ -440,7 +445,7 @@ contains
  
    ! * case 2: scalar
    else
-    call safeRootfinder(mSoil,stateVecTrial,rVecScaled,newtStepScaled,fScale,xScale,in_SS4HG,model_decisions,&! input
+    call safeRootfinder(mSoil,stateVecTrial,rVecScaled,newtStepScaled,fScale,xScale,in_SS4HG,model_decisions,noahmp,&! input
                         lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&             ! input
                         sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,& ! input-output
                         out_SS4HG,stateVecNew,fluxVecNew,resSinkNew,resVecNew,tooMuchMelt,out_SRF)            ! output
@@ -457,12 +462,13 @@ contains
  ! * module subroutine lineSearchRefinement: refine the iteration increment using line searches
  ! *********************************************************************************************************
  subroutine lineSearchRefinement(in_LSR,in_SS4HG,mSoil,stateVecTrial,newtStepScaled,aJacScaled,rVecScaled,fScale,xScale,& ! input
-                                 model_decisions,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
+                                 model_decisions,noahmp,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input
                                  sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&    ! input-output
                                  stateVecNew,fluxVecNew,resSinkNew,resVecNew,out_SS4HG,out_LSR)                           ! output
   ! provide access to the external procedures
   USE matrixOper_module, only: computGradient
   USE eval8summa_module, only: imposeConstraints
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! input
   type(in_type_lineSearchRefinement),intent(in) :: in_LSR         ! class object for intent(in) arguments
@@ -475,6 +481,7 @@ contains
   real(rkind),intent(in)          :: fScale(:)                    ! characteristic scale of the function evaluations
   real(rkind),intent(in)          :: xScale(:)                    ! characteristic scale of the state vector
   type(model_options),intent(in)  :: model_decisions(:)           ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup),      intent(in)  :: lookup_data                  ! lookup tables
   type(var_i),        intent(in)  :: type_data                    ! type of vegetation and soil
   type(var_d),        intent(in)  :: attr_data                    ! spatial attributes
@@ -571,7 +578,7 @@ contains
 
     ! compute the residual vector and function
     ! NOTE: This calls eval8summa in a wrapper subroutine
-    call eval8summa_wrapper(stateVecNew,fScale,in_SS4HG,model_decisions,&                                        ! input
+    call eval8summa_wrapper(stateVecNew,fScale,in_SS4HG,model_decisions,noahmp,&                                        ! input
                             lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&            ! input
                             sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&! input-output
                             fluxVecNew,resSinkNew,resVecNew,fNew,feasible,err,cmessage)                          ! output
@@ -736,13 +743,14 @@ contains
  ! *********************************************************************************************************
  ! * module subroutine safeRootfinder: refine the 1-d iteration increment using brackets
  ! *********************************************************************************************************
- subroutine safeRootfinder(mSoil,stateVecTrial,rVecscaled,newtStepScaled,fScale,xScale,in_SS4HG,model_decisions,&! input
+ subroutine safeRootfinder(mSoil,stateVecTrial,rVecscaled,newtStepScaled,fScale,xScale,in_SS4HG,model_decisions,noahmp,&! input
                            lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&             ! input
                            sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,& ! input-output
                            out_SS4HG,stateVecNew,fluxVecNew,resSinkNew,resVecNew,tooMuchMelt,out_SRF)            ! output
   USE,intrinsic :: ieee_arithmetic,only:ieee_is_nan            ! IEEE arithmetic (check NaN)
   USE eval8summa_module,only: imposeConstraints                ! imposeConstraints
   USE globalData,only:dNaN                                     ! double precision NaN
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! input
   integer(i4b),intent(in)         :: mSoil                     ! number of soil layers in solution vector
@@ -753,6 +761,7 @@ contains
   real(rkind),intent(in)          :: xScale(:)                 ! characteristic scale of the state vector
   type(in_type_summaSolv4homegrown),intent(in) :: in_SS4HG     ! model control variables and previous function evaluation
   type(model_options),intent(in)  :: model_decisions(:)        ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup),      intent(in)  :: lookup_data               ! lookup tables
   type(var_i),        intent(in)  :: type_data                 ! type of vegetation and soil
   type(var_d),        intent(in)  :: attr_data                 ! spatial attributes
@@ -837,7 +846,7 @@ contains
 
     ! get brackets if they do not exist
     if ( ieee_is_nan(xMin) .or. ieee_is_nan(xMax) ) then
-     call getBrackets(stateVecTrial,rVec,fScale,in_SS4HG,model_decisions,lookup_data,type_data,attr_data,&     ! input
+     call getBrackets(stateVecTrial,rVec,fScale,in_SS4HG,model_decisions,noahmp,lookup_data,type_data,attr_data,&     ! input
                       mpar_data,forc_data,bvar_data,prog_data,&                                                ! input
                       sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&    ! input-output
                       out_SS4HG,stateVecNew,fluxVecNew,resSinkNew,resVecNew,xMin,xMax,tooMuchMelt,err,cmessage)! output
@@ -870,7 +879,7 @@ contains
    end if
 
    ! evaluate summa
-   call eval8summa_wrapper(stateVecNew,fScale,in_SS4HG,model_decisions,&                                        ! input
+   call eval8summa_wrapper(stateVecNew,fScale,in_SS4HG,model_decisions,noahmp,&                                        ! input
                            lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&            ! input
                            sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&! input-output
                            fluxVecNew,resSinkNew,resVecNew,fNew,feasible,err,cmessage)                          ! output
@@ -896,12 +905,13 @@ contains
  ! *********************************************************************************************************
  ! * module subroutine getBrackets: get the brackets for safeRootfinder
  ! *********************************************************************************************************
- subroutine getBrackets(stateVecTrial,rVec,fScale,in_SS4HG,model_decisions,lookup_data,type_data,attr_data,&    ! input
+ subroutine getBrackets(stateVecTrial,rVec,fScale,in_SS4HG,model_decisions,noahmp,lookup_data,type_data,attr_data,&    ! input
                         mpar_data,forc_data,bvar_data,prog_data,&                                               ! input
                         sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&   ! input-output
                         out_SS4HG,stateVecNew,fluxVecNew,resSinkNew,resVecNew,xMin,xMax,tooMuchMelt,err,message)! output
   USE,intrinsic :: ieee_arithmetic,only:ieee_is_nan                  ! IEEE arithmetic (check NaN)
   USE eval8summa_module,only: imposeConstraints                      ! imposeConstraints
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! input
   real(rkind),intent(in)          :: stateVecTrial(:)                ! trial state vector
@@ -909,6 +919,7 @@ contains
   real(rkind),intent(in)          :: fScale(:)                       ! characteristic scale of the function evaluations
   type(in_type_summaSolv4homegrown),intent(in) :: in_SS4HG           ! model control variables and previous function evaluation
   type(model_options),intent(in)  :: model_decisions(:)              ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup),      intent(in)  :: lookup_data                     ! lookup tables
   type(var_i),        intent(in)  :: type_data                       ! type of vegetation and soil
   type(var_d),        intent(in)  :: attr_data                       ! spatial attributes
@@ -972,7 +983,7 @@ contains
 
    ! evaluate summa
    associate(fNew => out_SS4HG % fNew)
-    call eval8summa_wrapper(stateVecNew,fScale,in_SS4HG,model_decisions,&                                        ! input
+    call eval8summa_wrapper(stateVecNew,fScale,in_SS4HG,model_decisions,noahmp,&                                        ! input
                            &lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&            ! input
                            &sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&! input-output
                            &fluxVecNew,resSinkNew,resVecNew,fNew,feasible,err,cmessage)                          ! output
@@ -1015,17 +1026,19 @@ contains
  ! * module subroutine eval8summa_wrapper: compute the right-hand-side vector
  ! *********************************************************************************************************
  ! NOTE: This is simply a wrapper routine for eval8summa, to reduce the number of calling arguments
- subroutine eval8summa_wrapper(stateVecNew,fScale,in_SS4HG,model_decisions,&                                        ! input
+ subroutine eval8summa_wrapper(stateVecNew,fScale,in_SS4HG,model_decisions,noahmp,&                                        ! input
                                lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&            ! input
                                sMul,io_SS4HG,indx_data,diag_data,flux_data,deriv_data,dBaseflow_dWat,dBaseflow_dTk,&! input-output
                                fluxVecNew,resSinkNew,resVecNew,fNew,feasible,err,message)                           ! output
   USE eval8summa_module,only:eval8summa                        ! simulation of fluxes and residuals given a trial state vector
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! input
   real(rkind),intent(in)          :: stateVecNew(:)            ! updated state vector
   real(rkind),intent(in)          :: fScale(:)                 ! characteristic scale of the function evaluations
   type(in_type_summaSolv4homegrown),intent(in) :: in_SS4HG     ! model control variables and previous function evaluation
   type(model_options),intent(in)  :: model_decisions(:)        ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup),      intent(in)  :: lookup_data               ! lookup tables
   type(var_i),        intent(in)  :: type_data                 ! type of vegetation and soil
   type(var_d),        intent(in)  :: attr_data                 ! spatial attributes
@@ -1091,6 +1104,7 @@ contains
                    sMul,                    & ! intent(inout): state vector multiplier (used in the residual calculations)
                    ! input: data structures
                    model_decisions,         & ! intent(in):    model decisions
+                   noahmp, &
                    lookup_data,             & ! intent(in):    lookup tables
                    type_data,               & ! intent(in):    type of vegetation and soil
                    attr_data,               & ! intent(in):    spatial attributes

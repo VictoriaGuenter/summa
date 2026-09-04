@@ -54,6 +54,9 @@ module noahmp_globals
   REAL(rkind), PARAMETER :: RW     = 461.269   !gas constant for  water vapor (j/kg/k)
   REAL(rkind), PARAMETER :: DENH2O = 1000.     !density of water (kg/m3)
   REAL(rkind), PARAMETER :: DENICE = 917.      !density of ice (kg/m3)
+    INTEGER, PARAMETER :: MVT   = 200
+
+type,public :: noahmp_context
 
 !------------------------------------------------------------------------------------------!
 ! From the VEGPARM.TBL tables, as functions of vegetation category.
@@ -67,6 +70,7 @@ module noahmp_globals
 
   ! MPC change: make variables private for a given thread
   !$omp threadprivate(NROOT, RGL, RSMIN, HS, RSMAX, TOPT)
+
 
 !------------------------------------------------------------------------------------------!
 ! From the SOILPARM.TBL tables, as functions of soil category.
@@ -102,6 +106,13 @@ module noahmp_globals
 
   ! MPC change: make variables private for a given thread
   !$omp threadprivate(SLOPE, CSOIL, ZBOT, CZIL, KDT, FRZX)
+
+    REAL(rkind) :: HVT(MVT)         !top of canopy (m)
+    REAL(rkind) :: HVB(MVT)         !bottom of canopy (m)
+    REAL(rkind) :: SAIM(MVT,12)     !monthly stem area index, one-sided
+    REAL(rkind) :: LAIM(MVT,12)     !monthly leaf area index, one-sided
+
+end type
 
 
 ! LSM GENERAL PARAMETERS
@@ -505,7 +516,7 @@ contains
 ! ==================================================================================================
 ! ==================================================================================================
 ! --------------------------------------------------------------------------------------------------
-  SUBROUTINE PHENOLOGY (VEGTYP , ISURBAN, SNOWH  , TV     , LAT   , YEARLEN , JULIAN , & !in
+  SUBROUTINE PHENOLOGY (VEGTYP , ISURBAN, SNOWH  , TV     , LAT   , YEARLEN , JULIAN , context, & !in
                         LAI    , SAI    , HTOP   , ELAI   , ESAI  , IGS)                 !out
 
 ! --------------------------------------------------------------------------------------------------
@@ -525,6 +536,7 @@ contains
   REAL(rkind)            , INTENT(IN   ) :: JULIAN !Julian day of year (fractional) ( 0 <= JULIAN < YEARLEN )
   REAL(rkind)            , INTENT(INOUT) :: LAI    !LAI, unadjusted for burying by snow
   REAL(rkind)            , INTENT(INOUT) :: SAI    !SAI, unadjusted for burying by snow
+  type(noahmp_context) :: context
 
 ! outputs
   REAL(rkind)            , INTENT(OUT  ) :: HTOP   !top of canopy layer (m)
@@ -542,6 +554,11 @@ contains
   REAL(rkind)                            :: WT1,WT2 !interpolation weights
   REAL(rkind)                            :: T       !current month (1.00, ..., 12.00)
 ! --------------------------------------------------------------------------------------------------
+
+associate(SAIM => context%SAIM, &
+ LAIM => context%LAIM, &
+ HVT => context%HVT, &
+ HVB => context%HVB)
 
   ! Interpolate monthly SAI and LAI to daily values
   IF ( DVEG == 1 .or. DVEG == 3 .or. DVEG == 4 ) THEN
@@ -604,6 +621,7 @@ contains
      ENDIF
 
      HTOP = HVT(VEGTYP)
+  end associate
 
   END SUBROUTINE PHENOLOGY
 ! ==================================================================================================
@@ -612,7 +630,7 @@ contains
   SUBROUTINE RADIATION (VEGTYP  ,IST     ,ISC     ,NSOIL   ,SNEQVO  , & !in
                         SNEQV   ,DT      ,COSZ    ,TG      ,TV      , & !in
                         FSNO    ,QSNOW   ,FWET    ,ELAI    ,ESAI    , & !in
-                        SMC     ,SOLAD   ,SOLAI   ,FVEG             , & !in
+                        SMC     ,SOLAD   ,SOLAI   ,FVEG, context    , & !in
                         ALBOLD  ,TAUSS                              , & !inout
                         FSUN    ,LAISUN  ,LAISHA  ,PARSUN  ,PARSHA  , & !out
                         SAV     ,SAG     ,FSR     ,FSA     ,FSRV    , & !out
@@ -641,6 +659,7 @@ contains
   REAL(rkind), DIMENSION(1:2)    , INTENT(IN) :: SOLAI  !incoming diffuse solar radiation (w/m2)
   REAL(rkind), INTENT(IN)                     :: FSNO   !snow cover fraction (-)
   REAL(rkind), INTENT(IN)                     :: FVEG   !green vegetation fraction [0.0-1.0]
+  type(noahmp_context) :: context
 
 ! inout
   REAL(rkind),                  INTENT(INOUT) :: ALBOLD !snow albedo at last time step (CLASS type)
@@ -695,7 +714,7 @@ contains
    CALL ALBEDO (VEGTYP ,IST    ,ISC    ,NSOIL  ,DT     , & !in
                 COSZ   ,FAGE   ,ELAI   ,ESAI   ,TG     , & !in
                 TV     ,FSNO   ,FWET   ,SMC    ,SNEQVO , & !in
-                SNEQV  ,QSNOW  ,FVEG                   , & !in
+                SNEQV  ,QSNOW  ,FVEG, context          , & !in
                 ALBOLD ,TAUSS                          , & !inout
                 ALBGRD ,ALBGRI ,ALBD   ,ALBI   ,FABD   , & !out
                 FABI   ,FTDD   ,FTID   ,FTII   ,FSUN   , & !out
@@ -729,7 +748,7 @@ contains
   SUBROUTINE ALBEDO (VEGTYP ,IST    ,ISC    ,NSOIL  ,DT     , & !in
                      COSZ   ,FAGE   ,ELAI   ,ESAI   ,TG     , & !in
                      TV     ,FSNO   ,FWET   ,SMC    ,SNEQVO , & !in
-                     SNEQV  ,QSNOW  ,FVEG                   , & !in
+                     SNEQV  ,QSNOW  ,FVEG, context          , & !in
                      ALBOLD ,TAUSS                          , & !inout
                      ALBGRD ,ALBGRI ,ALBD   ,ALBI   ,FABD   , & !out
                      FABI   ,FTDD   ,FTID   ,FTII   ,FSUN   , & !out
@@ -764,6 +783,7 @@ contains
   REAL(rkind),                     INTENT(IN)  :: SNEQV  !snow mass (mm)
   REAL(rkind),                     INTENT(IN)  :: FVEG   !green vegetation fraction [0.0-1.0]
   REAL(rkind), DIMENSION(1:NSOIL), INTENT(IN)  :: SMC    !volumetric soil water (m3/m3)
+  type(noahmp_context) :: context
 
 ! inout
   REAL(rkind),                  INTENT(INOUT)  :: ALBOLD !snow albedo at last time step (CLASS type)
@@ -873,14 +893,14 @@ contains
       IC = 0      ! direct
       CALL TWOSTREAM (IB     ,IC      ,VEGTYP  ,COSZ    ,VAI    , & !in
                       FWET   ,TV      ,ALBGRD  ,ALBGRI  ,RHO    , & !in
-                      TAU    ,FVEG                              , & !in
+                      TAU    ,FVEG, context                     , & !in
                       FABD   ,ALBD    ,FTDD    ,FTID    ,GDIR   , & !out
                       FREVD  ,FREGD   ,BGAP    ,WGAP)
 
       IC = 1      ! diffuse
       CALL TWOSTREAM (IB     ,IC      ,VEGTYP  ,COSZ    ,VAI    , & !in
                       FWET   ,TV      ,ALBGRD  ,ALBGRI  ,RHO    , & !in
-                      TAU    ,FVEG                              , & !in
+                      TAU    ,FVEG, context                     , & !in
                       FABI   ,ALBI    ,FTDI    ,FTII    ,GDIR   , & !out
                       FREVI  ,FREGI   ,BGAP    ,WGAP)
 
@@ -1234,7 +1254,7 @@ contains
 ! --------------------------------------------------------------------------------------------------
   SUBROUTINE TWOSTREAM (IB     ,IC      ,VEGTYP  ,COSZ    ,VAI    , & !in
                         FWET   ,T       ,ALBGRD  ,ALBGRI  ,RHO    , & !in
-                        TAU    ,FVEG                              , & !in
+                        TAU    ,FVEG , context                             , & !in
                         FAB    ,FRE     ,FTD     ,FTI     ,GDIR   , & !out
                         FREV   ,FREG    ,BGAP    ,WGAP)
 
@@ -1266,6 +1286,7 @@ contains
    REAL(rkind), DIMENSION(1:2), INTENT(IN)  :: RHO     !leaf+stem reflectance
    REAL(rkind), DIMENSION(1:2), INTENT(IN)  :: TAU     !leaf+stem transmittance
    REAL(rkind),                 INTENT(IN)  :: FVEG    !green vegetation fraction [0.0-1.0]
+   type(noahmp_context) :: context
 
 ! output
 
@@ -1320,6 +1341,8 @@ contains
 
 ! -----------------------------------------------------------------
 ! compute within and between gaps
+associate(HVT => context%HVT, &
+HVB => context%HVB)
      VAI_SPREAD = VAI
      if(VAI == 0.0) THEN
          GAP     = 1.0
@@ -1472,6 +1495,7 @@ contains
      FAB(IB) = 1. - FRE(IB) - (1.-ALBGRD(IB))*FTD(IB) &
                             - (1.-ALBGRI(IB))*FTI(IB)
 
+  end associate
   END SUBROUTINE TWOSTREAM
 ! ==================================================================================================
   ! ==================================================================================================
@@ -1618,7 +1642,7 @@ contains
 
   END SUBROUTINE STOMATA
 ! ==================================================================================================
-  SUBROUTINE CANRES (PAR   ,SFCTMP,RCSOIL ,EAH   ,SFCPRS , & !in
+  SUBROUTINE CANRES (PAR   ,SFCTMP,RCSOIL ,EAH   ,SFCPRS , context, & !in
                      RC    ,PSN)                             !out
 
 ! --------------------------------------------------------------------------------------------------
@@ -1642,6 +1666,7 @@ contains
     REAL(rkind),                     INTENT(IN)  :: SFCPRS !surface pressure (pa)
     REAL(rkind),                     INTENT(IN)  :: EAH    !water vapor pressure (pa)
     REAL(rkind),                     INTENT(IN)  :: RCSOIL !soil moisture stress factor
+    type(noahmp_context), intent(in) :: context
 
 !outputs
 
@@ -1659,6 +1684,11 @@ contains
     REAL(rkind)                                  :: DQSDT2 !d(Q2SAT)/d(T)
 
 ! RSMIN, RSMAX, TOPT, RGL, HS are canopy stress parameters set in REDPRM
+associate(RGL => context%RGL, &
+  RSMIN => context%RSMIN, &
+  HS => context%HS, &
+  RSMAX => context%RSMAX, &
+  TOPT => context%TOPT)
 ! ----------------------------------------------------------------------
 ! initialize canopy resistance multiplier terms.
 ! ----------------------------------------------------------------------
@@ -1694,6 +1724,7 @@ contains
 
     RC  = RSMIN / (RCS * RCT * RCQ * RCSOIL)
     PSN = -999.99       ! PSN not applied for dynamic carbon
+    end associate
 
   END SUBROUTINE CANRES
 ! ==================================================================================================
@@ -1721,9 +1752,10 @@ contains
 ! ==================================================================================================
 ! ********************************* end of carbon subroutines *****************************
 ! ==================================================================================================
-  SUBROUTINE REDPRM (VEGTYP,SOILTYP,SLOPETYP,NSOIL,ISURBAN)
+  SUBROUTINE REDPRM (VEGTYP,SOILTYP,SLOPETYP,NSOIL,ISURBAN, context)
 
 !niu  use module_sf_noahlsm_param_init
+  use NOAHMP_VEG_PARAMETERS,only:HVT,HVB,SAIM,LAIM
 
     IMPLICIT NONE
 ! ----------------------------------------------------------------------
@@ -1773,6 +1805,7 @@ contains
     INTEGER, INTENT(IN)    :: SLOPETYP
 ! General parameters
     INTEGER, INTENT(IN)    :: NSOIL
+    type(noahmp_context) :: context
 
 ! Locals
     REAL(rkind)    :: REFDK
@@ -1782,6 +1815,29 @@ contains
     CHARACTER(len=256)     :: message
 ! ----------------------------------------------------------------------
 !
+  associate(NROOT => context%NROOT, &
+    RGL => context%RGL, &
+    RSMIN => context%RSMIN, &
+    HS => context%HS, &
+    RSMAX => context%RSMAX, &
+    TOPT => context%TOPT, &
+    BEXP => context%BEXP, &
+    SMCDRY => context%SMCDRY, &
+    F1 => context%F1, &
+    SMCMAX => context%SMCMAX, &
+    SMCREF => context%SMCREF, &
+    PSISAT => context%PSISAT, &
+    DKSAT => context%DKSAT, &
+    DWSAT => context%DWSAT, &
+    SMCWLT => context%SMCWLT, &
+    QUARTZ => context%QUARTZ, &
+    SLOPE => context%SLOPE, &
+    CSOIL => context%CSOIL, &
+    ZBOT => context%ZBOT, &
+    CZIL => context%CZIL, &
+    KDT => context%KDT, &
+    FRZX => context%FRZX)
+
     IF (SOILTYP .gt. SLCATS) THEN
        call wrf_message('SOILTYP must be less than SLCATS:')
        write(message, '("SOILTYP = ", I6, ";    SLCATS = ", I6)') SOILTYP, SLCATS
@@ -1857,14 +1913,18 @@ contains
 !    IF (VEGTYP .eq. BARE) SHDFAC = 0.0
 
     IF (NROOT .gt. NSOIL) THEN
-       WRITE (*,*) 'Warning: too many root layers'
-       write (*,*) 'NROOT = ', nroot
-       write (*,*) 'NSOIL = ', nSoil
-       call wrf_error_fatal("STOP in Noah-MP")
+     WRITE (*,*) 'Warning: too many root layers'
+      write (*,*) 'NROOT = ', nroot
+      write (*,*) 'NSOIL = ', nSoil
+      call wrf_error_fatal("STOP in Noah-MP")
     END IF
+  end associate
 
+  context%SAIM = SAIM
+  context%LAIM = LAIM
+  context%HVT = HVT
+  context%HVB = HVB
 ! ----------------------------------------------------------------------
-
   END  SUBROUTINE REDPRM
 ! ==================================================================================================
 

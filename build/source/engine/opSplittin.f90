@@ -202,6 +202,7 @@ subroutine opSplittin(&
                       bvar_data,            & ! intent(in):    model variables for the local basin
                       lookup_data,          & ! intent(in):    lookup tables
                       model_decisions,      & ! intent(in):    model decisions
+                      noahmp, &
                       ! output: model control
                       dtMultiplier,         & ! intent(out):   substep multiplier (-)
                       tooMuchMelt,          & ! intent(out):   flag to denote that ice is insufficient to support melt
@@ -215,6 +216,7 @@ subroutine opSplittin(&
   ! population/extraction of state vectors
   USE indexState_module,only:indexSplit                ! get state indices
   USE varSubstep_module,only:varSubstep                ! complete substeps for a given split
+  use noahmp_globals,only:noahmp_context
   implicit none
   ! ---------------------------------------------------------------------------------------
   ! * dummy variables
@@ -241,6 +243,7 @@ subroutine opSplittin(&
   type(var_dlength),intent(in)    :: bvar_data                      ! model variables for the local basin
   type(zLookup),    intent(in)    :: lookup_data                    ! lookup tables
   type(model_options),intent(in)  :: model_decisions(:)             ! model decisions
+  type(noahmp_context) :: noahmp
   ! output: model control
   real(rkind),intent(out)         :: dtMultiplier                   ! substep multiplier (-)
   logical(lgt),intent(out)        :: tooMuchMelt                    ! flag to denote that ice is insufficient to support melt
@@ -920,7 +923,7 @@ subroutine opSplittin(&
    ! solve variable subset for one full time step
    call initialize_varSubstep
    call varSubstep(in_varSubstep,io_varSubstep,&                                            ! intent(inout): class objects for model control
-                   model_decisions,lookup_data,type_data,attr_data,forc_data,mpar_data,&    ! intent(inout): data structures for model properties
+                   model_decisions,noahmp,lookup_data,type_data,attr_data,forc_data,mpar_data,&    ! intent(inout): data structures for model properties
                    indx_data,prog_data,diag_data,flux_data,flux_mean,deriv_data,bvar_data,&
                    out_varSubstep)                                                          ! intent(out): class object for model control
    call finalize_varSubstep

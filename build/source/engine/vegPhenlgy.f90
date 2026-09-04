@@ -69,6 +69,7 @@ contains
                        ! model control
                        nSnow,                       & ! intent(in):    number of snow layers
                        model_decisions,             & ! intent(in):    model decisions
+                       context, &
                        fracJulDay,                  & ! intent(in):    fractional julian days since the start of year
                        yearLength,                  & ! intent(in):    number of days in the current year
                        ! input/output: data structures
@@ -86,11 +87,13 @@ contains
  ! -------------------------------------------------------------------------------------------------
  ! modules
  USE NOAHMP_ROUTINES,only:phenology         ! determine vegetation phenology
+ use noahmp_globals,only:noahmp_context
  implicit none
  ! -------------------------------------------------------------------------------------------------
  ! input/output
  integer(i4b),intent(in)         :: nSnow               ! number of snow layers
  type(model_options),intent(in)  :: model_decisions(:)  ! model decisions
+ type(noahmp_context) :: context
  real(rkind),intent(in)          :: fracJulDay          ! fractional julian days since the start of year
  integer(i4b),intent(in)         :: yearLength          ! number of days in the current year
  type(var_i),intent(in)          :: type_data           ! type of vegetation and soil
@@ -178,6 +181,7 @@ contains
                  latitude,                    & ! intent(in): latitude
                  yearLength,                  & ! intent(in): number of days in the current year
                  fracJulDay,                  & ! intent(in): fractional julian days since the start of year
+                 context, &
                  scalarLAI,                   & ! intent(inout): one-sided leaf area index (m2 m-2)
                  scalarSAI,                   & ! intent(inout): one-sided stem area index (m2 m-2)
                  ! output

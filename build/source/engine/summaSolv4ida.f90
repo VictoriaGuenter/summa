@@ -111,6 +111,7 @@ subroutine summaSolv4ida(&
                       dMat,                    & ! intent(inout): diagonal of the Jacobian matrix (excludes fluxes)
                       ! input: data structures
                       model_decisions,         & ! intent(in):    model decisions
+                      noahmp, &
                       lookup_data,             & ! intent(in):    lookup data
                       type_data,               & ! intent(in):    type of vegetation and soil
                       attr_data,               & ! intent(in):    spatial attributes
@@ -150,6 +151,7 @@ subroutine summaSolv4ida(&
   USE computJacobWithPrime_module,only:computJacob4ida        ! system Jacobian
   USE tol4ida_module,only:computWeight4ida                    ! weight required for tolerances
   USE var_lookup,only:maxvarDecisions                         ! maximum number of decisions
+  use noahmp_globals,only:noahmp_context
   !======= Declarations =========
   implicit none
 
@@ -177,6 +179,7 @@ subroutine summaSolv4ida(&
   real(rkind), intent(inout)      :: dMat(:)                ! diagonal of the Jacobian matrix (excludes fluxes)
   ! input: data structures
   type(model_options),intent(in)  :: model_decisions(:)     ! model decisions
+  type(noahmp_context) :: noahmp
   type(zLookup),      intent(in)  :: lookup_data            ! lookup tables
   type(var_i),        intent(in)  :: type_data              ! type of vegetation and soil
   type(var_d),        intent(in)  :: attr_data              ! spatial attributes
@@ -303,6 +306,7 @@ subroutine summaSolv4ida(&
     eqns_data%diag_data      = diag_data
     eqns_data%flux_data      = flux_data
     eqns_data%ixSaturation   = ixSaturation
+    eqns_data%noahmp = noahmp
     
     ! allocate space and fill
     allocate( eqns_data%model_decisions(maxvarDecisions) ); eqns_data%model_decisions = model_decisions

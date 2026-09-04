@@ -129,6 +129,7 @@ subroutine systemSolv(&
                       flux_temp,         & ! intent(inout): model fluxes for a local HRU
                       bvar_data,         & ! intent(in):    model variables for the local basin
                       model_decisions,   & ! intent(in):    model decisions
+                      noahmp, &
                       stateVecInit,      & ! intent(in):    initial state vector
                       ! output
                       deriv_data,        & ! intent(inout): derivatives in model fluxes w.r.t. relevant state variables
@@ -161,6 +162,7 @@ subroutine systemSolv(&
 #endif
   USE eval8summa_module,only:eval8summa                     ! get the fluxes and residuals
   USE summaSolv4homegrown_module,only:summaSolv4homegrown   ! solve DAE using homegrown solver
+  use noahmp_globals,only:noahmp_context
 
   implicit none
   ! ---------------------------------------------------------------------------------------
@@ -190,6 +192,7 @@ subroutine systemSolv(&
   type(var_dlength),intent(inout) :: flux_temp                     ! model fluxes for a local HRU
   type(var_dlength),intent(in)    :: bvar_data                     ! model variables for the local basin
   type(model_options),intent(in)  :: model_decisions(:)            ! model decisions
+  type(noahmp_context) :: noahmp
   real(rkind),intent(in)          :: stateVecInit(:)               ! initial state vector (mixed units)
   ! output
   type(var_dlength),intent(inout) :: deriv_data                    ! derivatives in model fluxes w.r.t. relevant state variables
@@ -452,6 +455,7 @@ contains
                     sMul,                    & ! intent(inout): state vector multiplier (used in the residual calculations)
                     ! input: data structures
                     model_decisions,         & ! intent(in):    model decisions
+                    noahmp, &
                     lookup_data,             & ! intent(in):    lookup tables
                     type_data,               & ! intent(in):    type of vegetation and soil
                     attr_data,               & ! intent(in):    spatial attributes
@@ -513,6 +517,7 @@ contains
                     sMul,                    & ! intent(inout): state vector multiplier (used in the residual calculations)
                     ! input: data structures
                     model_decisions,         & ! intent(in):    model decisions
+                    noahmp, &
                     lookup_data,             & ! intent(in):    lookup table data structure
                     type_data,               & ! intent(in):    type of vegetation and soil
                     attr_data,               & ! intent(in):    spatial attributes
@@ -564,7 +569,7 @@ contains
    call io_SS4HG % initialize(firstFluxCall,xMin,xMax,ixSaturation)
    call summaSolv4homegrown(in_SS4HG,&                                                                               ! input: model control
                             stateVecTrial,fScale,xScale,resVec,sMul,dMat,&                                           ! input: state vectors
-                            model_decisions,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input: data structures
+                            model_decisions,noahmp,lookup_data,type_data,attr_data,mpar_data,forc_data,bvar_data,prog_data,&! input: data structures
                             indx_data,diag_data,flux_temp,deriv_data,&                                               ! input-output: data structures
                             dBaseflow_dWat,dBaseflow_dTk,io_SS4HG,&                                                  ! input-output: baseflow
                             stateVecNew,fluxVec,resSink,resVecNew,tooMuchMelt,out_SS4HG)                             ! output
@@ -686,6 +691,7 @@ contains
                        dMat,                    & ! intent(inout): diagonal of the Jacobian matrix (excludes fluxes)
                        ! input: data structures
                        model_decisions,         & ! intent(in):    model decisions
+                       noahmp, &
                        lookup_data,             & ! intent(in):    lookup data
                        type_data,               & ! intent(in):    type of vegetation and soil
                        attr_data,               & ! intent(in):    spatial attributes
@@ -771,6 +777,7 @@ contains
                           dMat,                    & ! intent(inout)  diagonal of the Jacobian matrix (excludes fluxes)
                           ! input: data structures
                           model_decisions,         & ! intent(in):    model decisions
+                          noahmp, &
                           lookup_data,             & ! intent(in):    lookup tables
                           type_data,               & ! intent(in):    type of vegetation and soil
                           attr_data,               & ! intent(in):    spatial attributes

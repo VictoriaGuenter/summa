@@ -111,6 +111,7 @@ contains
                        forc_data,                           & ! intent(in):    model forcing data
                        mpar_data,                           & ! intent(in):    model parameters
                        model_decisions,                     & ! intent(in):    model decisions
+                       noahmp, &
                        ! input-output: data structures
                        diag_data,                           & ! intent(inout): model diagnostic variables for a local HRU
                        flux_data,                           & ! intent(inout): model fluxes for a local HRU
@@ -120,6 +121,7 @@ contains
  ! ------------------------------------------------------------------------------------------------------------------------------------------------------
  ! conversion functions
  USE convert_funcs_module,only:satVapPress   ! function to compute the saturated vapor pressure (Pa)
+ use noahmp_globals,only:noahmp_context
  ! ------------------------------------------------------------------------------------------------------------------------------------------------------
  ! input: state and diagnostic variables
  real(rkind),intent(in)             :: scalarVegetationTemp      ! vegetation temperature (K)
@@ -130,6 +132,7 @@ contains
  type(var_d),intent(in)             :: forc_data                 ! model forcing data
  type(var_dlength),intent(in)       :: mpar_data                 ! model parameters
  type(model_options),intent(in)     :: model_decisions(:)        ! model decisions
+ type(noahmp_context) :: noahmp
  ! input-output: data structures    
  type(var_dlength),intent(inout)    :: diag_data                 ! diagnostic variables for a local HRU
  type(var_dlength),intent(inout)    :: flux_data                 ! model fluxes for a local HRU
@@ -273,6 +276,7 @@ contains
                           ix_stomResist,                     & ! intent(in): choice of function for stomatal resistance
                           ! input (local attributes)
                           vegTypeIndex,                      & ! intent(in): vegetation type index
+                          noahmp, &
                           ! input (forcing)
                           airtemp,                           & ! intent(in): air temperature at some height above the surface (K)
                           airpres,                           & ! intent(in): air pressure at some height above the surface (Pa)
@@ -1018,6 +1022,7 @@ contains
                               ixStomResist,                        & ! intent(in): choice of function for stomatal resistance
                               ! input (local attributes)
                               vegTypeIndex,                        & ! intent(in): vegetation type index
+                              noahmp, &
                               ! input (forcing)
                               airtemp,                             & ! intent(in): air temperature at some height above the surface (K)
                               airpres,                             & ! intent(in): air pressure at some height above the surface (Pa)
@@ -1048,11 +1053,13 @@ contains
  USE mDecisions_module, only: BallBerry,Jarvis                ! options for the choice of function for stomatal resistance
  USE NOAHMP_ROUTINES,only:stomata                             ! compute canopy resistance based on Ball-Berry
  USE NOAHMP_ROUTINES,only:canres                              ! compute canopy resistance based Jarvis
+ USE noahmp_globals,only:noahmp_context
  implicit none
  ! input (model decisions)
  integer(i4b),intent(in)       :: ixStomResist                ! choice of function for stomatal resistance
  ! input (local attributes)
  integer(i4b),intent(in)       :: vegTypeIndex                ! vegetation type index
+ type(noahmp_context) :: noahmp
  ! input (forcing)
  real(rkind),intent(in)           :: airtemp                     ! measured air temperature at some height above the surface (K)
  real(rkind),intent(in)           :: airpres                     ! measured air pressure at some height above the surface (Pa)
@@ -1129,6 +1136,7 @@ contains
                  scalarTranspireLim,                 & ! intent(in): weighted average of the soil moiture factor controlling stomatal resistance (-)
                  scalarVP_CanopyAir,                 & ! intent(in): canopy air vapor pressure (Pa)
                  airpres,                            & ! intent(in): air pressure at some height above the surface (Pa)
+                 noahmp, &
                  ! output
                  scalarStomResist,                   & ! intent(out): stomatal resistance (s m-1)
                  scalarPhotosynthesis                ) ! intent(out): photosynthesis (umolco2 m-2 s-1)

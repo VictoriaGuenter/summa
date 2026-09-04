@@ -67,6 +67,7 @@ contains
                        nSoil,                        & ! intent(in):    number of soil layers
                        nLayers,                      & ! intent(in):    total number of layers
                        computeVegFlux,               & ! intent(in):    logical flag to compute vegetation fluxes (.false. if veg buried by snow)
+                       context, &
                        type_data,                    & ! intent(in):    classification of veg, soil etc. for a local HRU
                        prog_data,                    & ! intent(inout): model prognostic variables for a local HRU
                        diag_data,                    & ! intent(inout): model diagnostic variables for a local HRU
@@ -74,6 +75,7 @@ contains
                        err,message)                    ! intent(out): error control
  ! external routines
  USE NOAHMP_ROUTINES,only:radiation                                ! subroutine to calculate albedo and shortwave radiaiton in the canopy
+ use noahmp_globals,only:noahmp_context
  implicit none
  ! dummy variables
  real(rkind),intent(in)             :: dt                             ! time step (s) -- only used in Noah-MP radiation, to compute albedo
@@ -81,6 +83,7 @@ contains
  integer(i4b),intent(in)            :: nSoil                          ! number of soil layers
  integer(i4b),intent(in)            :: nLayers                        ! total number of layers
  logical(lgt),intent(in)            :: computeVegFlux                 ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
+ type(noahmp_context) :: context
  type(var_i),intent(in)             :: type_data                      ! classification of veg, soil etc. for a local HRU
  type(var_dlength),intent(inout)    :: prog_data                      ! model prognostic variables for a local HRU
  type(var_dlength),intent(inout)    :: diag_data                      ! model diagnostic variables for a local HRU
@@ -174,6 +177,7 @@ contains
                   spectralIncomingDirect(1:nSpecBand),   & ! intent(in): incoming direct solar radiation in each wave band (w m-2)
                   spectralIncomingDiffuse(1:nSpecBand),  & ! intent(in): incoming diffuse solar radiation in each wave band (w m-2)
                   scalarVegFraction,                     & ! intent(in): vegetation fraction (=1 forces no canopy gaps and open areas in radiation routine)
+                  context, &
                   ! output
                   scalarSnowAlbedo,                      & ! intent(inout): snow albedo (-)
                   scalarSnowAge,                         & ! intent(inout): non-dimensional snow age (-)
@@ -200,6 +204,7 @@ contains
                   isc,                                                & ! intent(in): index of soil type
                   computeVegFlux,                                     & ! intent(in): logical flag to compute vegetation fluxes (.false. if veg buried by snow)
                   ix_canopySrad,                                      & ! intent(in): index of method used for transmission of shortwave rad through the canopy
+                  context, &
                   ! input: model variables
                   scalarCosZenith,                                    & ! intent(in): cosine of direct zenith angle (0-1)
                   spectralIncomingDirect(1:nSpecBand),                & ! intent(in): incoming direct solar radiation in each wave band (w m-2)
@@ -250,6 +255,7 @@ contains
                       isc,                                                & ! intent(in): index of soil color
                       computeVegFlux,                                     & ! intent(in): logical flag to compute vegetation fluxes (.false. if veg buried by snow)
                       ix_canopySrad,                                      & ! intent(in): index of method used for transmission of shortwave rad through the canopy
+                      context, &
                       ! input: model variables
                       scalarCosZenith,                                    & ! intent(in): cosine of direct zenith angle (0-1)
                       spectralIncomingDirect,                             & ! intent(in): incoming direct solar radiation in each wave band (w m-2)
@@ -285,11 +291,13 @@ contains
  ! Noah vegetation tables
  USE NOAHMP_VEG_PARAMETERS, only: RHOS,RHOL                                  ! Noah-MP: stem and leaf reflectance for each wave band
  USE NOAHMP_VEG_PARAMETERS, only: TAUS,TAUL                                  ! Noah-MP: stem and leaf transmittance for each wave band
+ use noahmp_globals,only:noahmp_context
  ! input
  integer(i4b),intent(in)           :: vegTypeIndex                              ! vegetation type index
  integer(i4b),intent(in)           :: isc                                       ! soil color index
  logical(lgt),intent(in)           :: computeVegFlux                            ! logical flag to compute vegetation fluxes (.false. if veg buried by snow)
  integer(i4b),intent(in)           :: ix_canopySrad                             ! choice of canopy shortwave radiation method
+ type(noahmp_context) :: context
  real(rkind),intent(in)            :: scalarCosZenith                           ! cosine of the solar zenith angle (0-1)
  real(rkind),intent(in)            :: spectralIncomingDirect(:)                 ! incoming direct solar radiation in each wave band (w m-2)
  real(rkind),intent(in)            :: spectralIncomingDiffuse(:)                ! incoming diffuse solar radiation in each wave band (w m-2)
@@ -768,6 +776,7 @@ contains
                    spectralVegReflc,                  & ! intent(in): leaf+stem reflectance (1:nSpecBand)
                    spectralVegTrans,                  & ! intent(in): leaf+stem transmittance (1:nSpecBand)
                    scalarVegFraction,                 & ! intent(in): vegetation fraction (=1 forces no canopy gaps and open areas in radiation routine)
+                   context, &
                    ! output
                    spectralCanopyAbsorbedDirect,      & ! intent(out): flux abs by veg layer (per unit incoming flux), (1:nSpecBand)
                    spectralTotalReflectedDirect,      & ! intent(out): flux refl above veg layer (per unit incoming flux), (1:nSpecBand)
@@ -796,6 +805,7 @@ contains
                    spectralVegReflc,                  & ! intent(in): leaf+stem reflectance (1:nSpecBand)
                    spectralVegTrans,                  & ! intent(in): leaf+stem transmittance (1:nSpecBand)
                    scalarVegFraction,                 & ! intent(in): vegetation fraction (=1 forces no canopy gaps and open areas in radiation routine)
+                   context, &
                    ! output
                    spectralCanopyAbsorbedDiffuse,     & ! intent(out): flux abs by veg layer (per unit incoming flux), (1:nSpecBand)
                    spectralTotalReflectedDiffuse,     & ! intent(out): flux refl above veg layer (per unit incoming flux), (1:nSpecBand)

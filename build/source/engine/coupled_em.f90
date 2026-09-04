@@ -113,6 +113,7 @@ subroutine coupled_em(&
                       fracJulDay,        & ! intent(in):    fractional julian days since the start of year
                       yearLength,        & ! intent(in):    number of days in the current year
                       ! data structures (input)
+                      noahmp, &
                       type_data,         & ! intent(in):    local classification of soil veg etc. for each HRU
                       attr_data,         & ! intent(in):    local attributes for each HRU
                       forc_data,         & ! intent(in):    model forcing data
@@ -153,6 +154,7 @@ subroutine coupled_em(&
   USE convertEnthalpyTemp_module,only:T2enthTemp_snow           ! convert temperature to enthalpy for snow
   USE convertEnthalpyTemp_module,only:T2enthTemp_soil           ! convert temperature to enthalpy for soil
   USE convertEnthalpyTemp_module,only:enthTemp_or_enthalpy      ! add phase change terms to delta temperature component of enthalpy or vice versa
+  use noahmp_globals,only:noahmp_context
 
   implicit none
 
@@ -161,6 +163,7 @@ subroutine coupled_em(&
   integer(i4b),intent(in)              :: dt_init_factor         ! Used to adjust the length of the timestep in the event of a failure
   logical(lgt),intent(inout)           :: computeVegFlux         ! flag to indicate if we are computing fluxes over vegetation (.false. means veg is buried with snow)
   ! data structures (input)
+  type(noahmp_context) :: noahmp
   type(var_i),intent(in)               :: type_data              ! type of vegetation and soil
   type(var_d),intent(in)               :: attr_data              ! spatial attributes
   type(var_d),intent(in)               :: forc_data              ! model forcing data
@@ -467,6 +470,7 @@ subroutine coupled_em(&
                     ! model control
                     nSnow,                       & ! intent(in):    number of snow layers
                     model_decisions,             & ! intent(in):    model decisions
+                    noahmp, &
                     ! input/output: data structures
                     fracJulDay,                  & ! intent(in):    fractional julian days since the start of year
                     yearLength,                  & ! intent(in):    number of days in the current year
@@ -566,6 +570,7 @@ subroutine coupled_em(&
                     nSoil,                        & ! intent(in):    number of soil layers
                     nLayers,                      & ! intent(in):    total number of layers
                     computeVegFlux,               & ! intent(in):    logical flag to compute vegetation fluxes (.false. if veg buried by snow)
+                    noahmp, &
                     type_data,                    & ! intent(in):    type of vegetation and soil
                     prog_data,                    & ! intent(inout): model prognostic variables for a local HRU
                     diag_data,                    & ! intent(inout): model diagnostic variables for a local HRU
@@ -1003,6 +1008,7 @@ subroutine coupled_em(&
                       bvar_data,                              & ! intent(in):    model variables for the local basin
                       lookup_data,                            & ! intent(in):    lookup tables
                       model_decisions,                        & ! intent(in):    model decisions
+                      noahmp, &
                       ! output: model control
                       dtMultiplier,                           & ! intent(out):   substep multiplier (-)
                       tooMuchMelt,                            & ! intent(out):   flag to denote that ice is insufficient to support melt
